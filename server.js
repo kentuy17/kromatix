@@ -2,6 +2,7 @@ const express = require('express');
 const fileUpload = require('express-fileupload');
 const bodyParser = require('body-parser');
 const Jimp = require("jimp");
+const fs = require('fs');
 
 const app = express();
 
@@ -22,21 +23,31 @@ const resize = (length = 250, width = 250, infile, outfile = 'image.jpg') => {
       .greyscale() // set greyscale
       .write(outfile); // save
   });
+
+  return outfile
 }
 
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
 app.post('/resize', async (req, res) => {
-  const { image } = req.files;
+  try {
+    const { image } = req.files;
 
-  if (!image) return res.sendStatus(400)
+    if (!image) return res.sendStatus(400)
 
-  const outfile = `./out/${req.body.name}`
-  const upload = __dirname + '/upload/' + image.name
+    const outfile = './out/' + req.body.name
+    const upload = __dirname + '/upload/' + image.name
 
-  image.mv(upload).then(() => {
-    resize(550, 550, upload, outfile);
-  })
+    image.mv(upload).then(() => {
+      return resize(550, 550, upload, outfile);
+    })
 
-  res.sendStatus(200)
+    delay(1000).then(() => {
+      res.sendFile(__dirname + '/out/' + req.body.name)
+    })
+  } catch (error) {
+    res.send(500, error.message)
+  }
 })
 
 var server = app.listen(8081, () => {
